@@ -23,9 +23,10 @@ defmodule Robotis.MixProject do
     [
       {:circuits_uart, "~> 1.0"},
       # {:mimic, "~> 1.7", only: :test},
-      {:resolve, "~> 0.1", only: :test},
+      {:resolve, "~> 0.1"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:replay, path: "../replay", only: :test}
     ]
   end
 end
