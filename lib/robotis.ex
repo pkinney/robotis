@@ -2,7 +2,7 @@ defmodule Robotis do
   use GenServer
 
   require Logger
-  alias Robotis.{Comm, Servo, Ping}
+  alias Robotis.{Comm, ControlTable, Servo, Ping}
 
   @options ~w(uart_port baud)a
 
@@ -17,49 +17,51 @@ defmodule Robotis do
   @type connect() :: %{uart: pid()}
   @type param() :: __MODULE__.ControlTable.param()
   @type servo_id() :: byte()
+  @type server() :: atom() | pid()
 
-  def enumerate_servos(), do: GenServer.call(__MODULE__, :enumerate_servos)
+  @spec ping(server()) :: Ping.result()
+  def ping(pid), do: GenServer.call(pid, :ping)
 
-  @spec ping(servo_id()) :: __MODULE__.Ping.ping_response()
-  def ping(servo), do: GenServer.call(__MODULE__, {:ping, servo})
+  @spec ping(server(), servo_id()) :: Ping.result()
+  def ping(pid, servo), do: GenServer.call(pid, {:ping, servo})
 
-  @spec read(servo_id(), param()) :: {:ok, any()} | {:error, any()}
-  def read(servo, param), do: GenServer.call(__MODULE__, {:read, servo, param})
+  @spec read(server(), servo_id(), param()) :: {:ok, any()} | {:error, any()}
+  def read(pid, servo, param), do: GenServer.call(pid, {:read, servo, param})
 
-  @spec write(servo_id(), param(), any(), boolean()) :: :ok | {:error, any()}
-  def write(servo, param, value, await_status \\ false)
+  @spec write(server(), servo_id(), param(), any(), boolean()) :: :ok | {:error, any()}
+  def write(pid, servo, param, value, await_status \\ false)
 
-  def write(servo, param, value, false),
-    do: GenServer.cast(__MODULE__, {:write, servo, param, value})
+  def write(pid, servo, param, value, false),
+    do: GenServer.cast(pid, {:write, servo, param, value})
 
-  def write(servo, param, value, true),
-    do: GenServer.call(__MODULE__, {:write, servo, param, value})
+  def write(pid, servo, param, value, true),
+    do: GenServer.call(pid, {:write, servo, param, value})
 
-  @spec factory_reset(servo_id()) :: :ok | {:error, any()}
-  def factory_reset(servo), do: GenServer.cast(__MODULE__, {:factory_reset, servo})
+  @spec factory_reset(server(), servo_id()) :: :ok | {:error, any()}
+  def factory_reset(pid, servo), do: GenServer.cast(pid, {:factory_reset, servo})
 
-  @spec reboot(servo_id()) :: :ok | {:error, any()}
-  def reboot(servo), do: GenServer.cast(__MODULE__, {:reboot, servo})
+  @spec reboot(server(), servo_id()) :: :ok | {:error, any()}
+  def reboot(pid, servo), do: GenServer.cast(pid, {:reboot, servo})
 
-  @spec clear(servo_id()) :: :ok | {:error, any()}
-  def clear(servo), do: GenServer.cast(__MODULE__, {:clear, servo})
+  @spec clear(server(), servo_id()) :: :ok | {:error, any()}
+  def clear(pid, servo), do: GenServer.cast(pid, {:clear, servo})
 
-  @spec sync_write(param(), [{servo_id(), any()}]) ::
+  @spec sync_write(server(), param(), [{servo_id(), any()}]) ::
           list({servo_id(), param(), :ok | {:error, any()}})
-  def sync_write(param, servos_and_values),
-    do: GenServer.call(__MODULE__, {:sync_write, param, servos_and_values})
+  def sync_write(pid, param, servos_and_values),
+    do: GenServer.call(pid, {:sync_write, param, servos_and_values})
 
-  @spec fast_sync_read([servo_id()], param()) ::
+  @spec fast_sync_read(server(), [servo_id()], param()) ::
           list({servo_id(), {:ok, any()} | {:error, any()}})
-  def fast_sync_read(servos, param),
-    do: GenServer.call(__MODULE__, {:fast_sync_read, servos, param})
+  def fast_sync_read(pid, servos, param),
+    do: GenServer.call(pid, {:fast_sync_read, servos, param})
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(
       __MODULE__,
       Keyword.take(opts, @options),
-      Keyword.drop(opts, @options) ++ [name: __MODULE__]
+      Keyword.drop(opts, @options)
     )
   end
 
@@ -74,7 +76,47 @@ defmodule Robotis do
   end
 
   @impl true
+  def handle_call(:ping, _, state) do
+    {:reply, Comm.ping(state.connect) |> Enum.map(&Ping.decode/1), state}
+  end
+
   def handle_call({:ping, servo_id}, _, state) do
-    {:reply, Ping.ping(state.connect, servo_id), state}
+    {:reply, Comm.ping(state.connect, servo_id) |> Ping.decode(), state}
+  end
+
+  def handle_call({:read, servo_id, param}, _, state) do
+    {address, length} = ControlTable.address_and_length_for_param(param)
+
+    Comm.read(state.connect, servo_id, address, length)
+    |> case do
+      {:ok, resp, _} ->
+        value = ControlTable.decode_param(param, resp)
+        {:reply, {:ok, value}, state}
+
+      e ->
+        e
+    end
+  end
+
+  def handle_call({:write, servo_id, param, value}, _, state) do
+    ControlTable.encode_param(param, value)
+    |> case do
+      {:ok, address, bytes} ->
+        Comm.write_and_await_status(state.connect, servo_id, address, bytes)
+
+      e ->
+        e
+    end
+    |> case do
+      {:ok, "", _} -> {:reply, :ok, state}
+      {:error, error} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  @impl true
+  def handle_cast({:write, servo_id, param, value}, state) do
+    {address, _, bytes} = ControlTable.encode_param(param, value) |> IO.inspect()
+    :ok = Comm.write(state.connect, servo_id, address, bytes)
+    {:noreply, state}
   end
 end

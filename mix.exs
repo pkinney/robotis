@@ -22,7 +22,8 @@ defmodule Robotis.MixProject do
   defp deps do
     [
       {:circuits_uart, "~> 1.0"},
-      {:mock, "~> 0.3.0", only: :test},
+      # {:mimic, "~> 1.7", only: :test},
+      {:resolve, "~> 0.1", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false}
     ]

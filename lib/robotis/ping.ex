@@ -9,23 +9,14 @@ defmodule Robotis.Ping do
           firmware: byte()
         }
 
-  @spec ping(Robotis.connect()) :: [{:ok, __MODULE__.ping_response()}]
-  def ping(connect) do
-    Comm.ping(connect)
-    |> Enum.map(&decode_ping/1)
-    |> Enum.map(fn
-      {:ok, a} -> a
-      _ -> nil
-    end)
-    |> Enum.reject(&is_nil/1)
-  end
+  @type result() :: {:ok, ping_response()} | {:error | any()}
 
-  @spec ping(Robotis.connect(), byte()) :: {:ok, __MODULE__.ping_response()} | {:error, any()}
-  def ping(connect, id) do
-    Comm.ping(connect, id) |> decode_ping()
-  end
+  @spec decode_many(list(Comm.result())) :: list(result())
+  def decode_many([]), do: []
+  def decode_many([resp | rest]), do: [decode(resp) | decode_many(rest)]
 
-  defp decode_ping({:ok, <<p1, p2, p3>>, id, 0x55}) do
+  @spec decode(Comm.result()) :: result()
+  def decode({:ok, <<p1, p2, p3>>, id}) do
     model_number = Utils.decode_int(<<p1, p2>>)
 
     {:ok,
@@ -37,8 +28,8 @@ defmodule Robotis.Ping do
      }}
   end
 
-  defp decode_ping({:ok, _, _, _}), do: {:error, :bad_ping}
-  defp decode_ping(err), do: err
+  def decode({:ok, _, _}), do: {:error, :bad_ping}
+  def decode(err), do: err
 
   defp model_number_to_model(350), do: :xl320
   defp model_number_to_model(1200), do: :xl330_m288

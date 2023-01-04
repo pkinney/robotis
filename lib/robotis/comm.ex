@@ -2,7 +2,7 @@ defmodule Robotis.Comm do
   require Logger
   import Bitwise
   alias Robotis.Comm.CRC
-  alias Robotis.Utils
+  alias Robotis.{Ping, Utils}
 
   @type servo_error() ::
           :hardware_alert
@@ -15,18 +15,16 @@ defmodule Robotis.Comm do
           | :unknown_error
   @type servo_id() :: byte()
   @type instruction() :: byte()
-  @type result() ::
-          {:ok, binary(), servo_id(), instruction()}
-          | {:servo_error, servo_error(), binary(), servo_id(), instruction()}
+  @type result() :: {:ok, binary(), servo_id()} | {:error, servo_error()}
 
   @header <<0xFF, 0xFF, 0xFD, 0x00>>
 
-  # defp uart_mod(), do: Resolve.resolve(Circuits.UART)
+  defp uart_mod(), do: Resolve.resolve(Circuits.UART)
 
-  @spec open(String.t()) :: {:ok, Robotis.connect()} | {:error, any()}
-  def open(uart_port) do
-    with {:ok, uart} <- Circuits.UART.start_link(),
-         :ok <- Circuits.UART.open(uart, uart_port, speed: 1_000_000, active: false) do
+  @spec open(String.t(), non_neg_integer()) :: {:ok, Robotis.connect()} | {:error, any()}
+  def open(uart_port, speed) do
+    with {:ok, uart} <- uart_mod().start_link(),
+         :ok <- uart_mod().open(uart, uart_port, speed: speed, active: false) do
       {:ok, %{uart: uart}}
     end
   end
@@ -44,8 +42,15 @@ defmodule Robotis.Comm do
   end
 
   @spec write(Robotis.connect(), servo_id(), byte(), binary()) :: :ok | {:error, any()}
-  def write(servo, id, address, params) do
-    build_message(0x03, id, Utils.encode_int(address, 2) <> params) |> send_uart(servo)
+  def write(connect, id, address, params) do
+    build_message(0x03, id, Utils.encode_int(address, 2) <> params) |> send_uart(connect)
+  end
+
+  @spec write_and_await_status(Robotis.connect(), servo_id(), byte(), binary()) ::
+          result()
+  def write_and_await_status(connect, id, address, params) do
+    :ok = build_message(0x03, id, Utils.encode_int(address, 2) <> params) |> send_uart(connect)
+    receive_one(connect)
   end
 
   @spec read(Robotis.connect(), servo_id(), byte(), non_neg_integer()) :: result()
@@ -91,7 +96,7 @@ defmodule Robotis.Comm do
 
   defp send_uart(msg, connect) do
     # Logger.info("[#{__MODULE__}] Sending #{inspect(msg, base: :hex)}")
-    Circuits.UART.write(connect.uart, msg)
+    uart_mod().write(connect.uart, msg)
   end
 
   defp receive_one(connect) do
@@ -106,10 +111,10 @@ defmodule Robotis.Comm do
         decode_packet(packet)
 
       :incomplete ->
-        Circuits.UART.read(servo.uart, 100)
+        uart_mod().read(servo.uart, 100)
         |> case do
           {:ok, ""} ->
-            {:error, :noresponse}
+            {:error, :no_response}
 
           {:ok, data} ->
             do_receive_one(servo, buffer <> data)
@@ -133,7 +138,7 @@ defmodule Robotis.Comm do
         [decode_packet(packet) | do_receive_many(servo, leftover)]
 
       :incomplete ->
-        Circuits.UART.read(servo.uart, 100)
+        uart_mod().read(servo.uart, 100)
         |> case do
           {:ok, ""} -> []
           {:ok, data} -> do_receive_many(servo, buffer <> data)
@@ -163,7 +168,7 @@ defmodule Robotis.Comm do
     with {:ok, body} <- CRC.validate_crc(packet),
          {:ok, id, instruction, error, params} <- split_body(body),
          :ok <- check_error(id, instruction, error, params) do
-      {:ok, params, id, instruction}
+      {:ok, params, id}
     end
   end
 
@@ -192,7 +197,7 @@ defmodule Robotis.Comm do
   defp check_error(_, _, 0x00, _), do: :ok
 
   defp check_error(id, instruction, err, params),
-    do: {:servo_error, decode_error(<<err>>), params, id, instruction}
+    do: {:error, decode_error(<<err>>)}
 
   defp decode_error(<<0>>), do: :ok
   defp decode_error(<<1::1, _::7>>), do: :hardware_alert

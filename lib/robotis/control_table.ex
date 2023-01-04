@@ -9,7 +9,7 @@ defmodule Robotis.ControlTable do
           | :max_angle_limit
           | :min_angle_limit
           | :torque_enabled
-          | :goal_angle
+          | :goal_position
           | :moving
           | :moving_status
           | :present_current
@@ -48,7 +48,7 @@ defmodule Robotis.ControlTable do
         max_angle_limit: {48, 4, 360 / 4096.0},
         min_angle_limit: {52, 4, 360 / 4096.0},
         torque_enabled: {64, 1, :bool},
-        goal_angle: {116, 4, 360 / 4096.0},
+        goal_position: {116, 4, 360 / 4096.0},
         moving: {122, 1, :bool},
         moving_status: {123, 1, {__MODULE__, :decode_moving_status, nil}},
         present_current: {126, 2, 1},
@@ -73,20 +73,19 @@ defmodule Robotis.ControlTable do
     end
   end
 
-  @spec encode_param(param(), any()) :: binary()
+  @spec encode_param(param(), any()) :: {:ok, address(), binary()} | {:error, any()}
   def encode_param(param, value) do
-    case info_for_param(param) do
-      {_, len, scale} when is_number(scale) ->
-        (value / scale) |> trunc() |> Utils.encode_int(len)
+    {address, length, conversion} = info_for_param(param)
 
-      {_, _, mapping} when is_list(mapping) ->
-        encode_map(value, mapping)
-
-      {_, _, :bool} ->
-        Utils.encode_boolean(value)
-
-      {_, _, {mod, _, fun}} ->
-        apply(mod, fun, [value])
+    case conversion do
+      scale when is_number(scale) -> (value / scale) |> trunc() |> Utils.encode_int(length)
+      mapping when is_list(mapping) -> encode_map(value, mapping)
+      :bool -> Utils.encode_boolean(value)
+      {mod, _, fun} -> apply(mod, fun, [value])
+    end
+    |> case do
+      nil -> {:error, :unconvertable_value}
+      bytes -> {:ok, address, bytes}
     end
   end
 
@@ -99,8 +98,11 @@ defmodule Robotis.ControlTable do
   end
 
   defp encode_map(value, map) do
-    {_, a} = Enum.find(map, &(elem(&1, 0) == value))
-    a
+    Enum.find(map, &(elem(&1, 0) == value))
+    |> case do
+      {_, a} -> a
+      nil -> nil
+    end
   end
 
   defp decode_moving_status(
