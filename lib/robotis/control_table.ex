@@ -1,6 +1,8 @@
 defmodule Robotis.ControlTable do
   alias Robotis.Utils
 
+  import Bitwise
+
   @type param() ::
           :drive_mode
           | :operating_mode
@@ -47,6 +49,7 @@ defmodule Robotis.ControlTable do
         return_delay_time: {9, 1, 1},
         max_angle_limit: {48, 4, 360 / 4096.0},
         min_angle_limit: {52, 4, 360 / 4096.0},
+        shutdown: {63, 1, {__MODULE__, :decode_shutdown, :encode_shutdown}},
         torque_enabled: {64, 1, :bool},
         goal_position: {116, 4, 360 / 4096.0},
         moving: {122, 1, :bool},
@@ -63,13 +66,13 @@ defmodule Robotis.ControlTable do
     {address, len}
   end
 
-  @spec decode_param(param(), binary()) :: any()
+  @spec decode_param(param(), binary()) :: {:ok, any()} | {:error, any()}
   def decode_param(param, value) do
     case info_for_param(param) do
-      {_, _, scale} when is_number(scale) -> Utils.decode_int(value) * scale
+      {_, _, scale} when is_number(scale) -> {:ok, Utils.decode_int(value) * scale}
       {_, _, mapping} when is_list(mapping) -> decode_map(value, mapping)
-      {_, _, :bool} -> Utils.decode_boolean(value)
-      {_, _, {mod, fun, _}} -> apply(mod, fun, [value])
+      {_, _, :bool} -> {:ok, Utils.decode_boolean(value)}
+      {_, _, {mod, fun, _}} -> {:ok, apply(mod, fun, [value])}
     end
   end
 
@@ -92,7 +95,7 @@ defmodule Robotis.ControlTable do
   defp decode_map(value, map) do
     Enum.find(map, &(elem(&1, 1) == value))
     |> case do
-      {a, _} -> a
+      {a, _} -> {:ok, a}
       _ -> {:error, :no_decode, value}
     end
   end
@@ -105,9 +108,20 @@ defmodule Robotis.ControlTable do
     end
   end
 
-  defp decode_moving_status(
-         <<_::2, profile::2, following_error::1, _::1, in_progress::1, arrived::1>>
-       ) do
+  ################################################################
+  ## Function-based decodes
+  ################################################################
+
+  @spec decode_moving_status(<<_::8>>) ::
+          %{
+            arrived: boolean,
+            following_error: boolean,
+            in_progress: boolean,
+            profile: :not_used | :rectangular | :trapezoidal | :triangular
+          }
+  def decode_moving_status(
+        <<_::2, profile::2, following_error::1, _::1, in_progress::1, arrived::1>>
+      ) do
     %{
       profile:
         case profile do
@@ -120,6 +134,50 @@ defmodule Robotis.ControlTable do
       in_progress: in_progress == 1,
       arrived: arrived == 1
     }
+  end
+
+  @spec decode_shutdown(<<_::8>>) ::
+          list(
+            :overload_error
+            | :electrical_shock_error
+            | :motor_encoder_error
+            | :overheating_error
+            | :overload_error
+            | :input_voltage_error
+          )
+  def decode_shutdown(
+        <<0::2, overload_error::1, electrical_shock_error::1, motor_encoder_error::1,
+          overheating_error::1, _::1, input_voltage_error::1>>
+      ) do
+    [
+      overload_error: overload_error,
+      electrical_shock_error: electrical_shock_error,
+      motor_encoder_error: motor_encoder_error,
+      overheating_error: overheating_error,
+      input_voltage_error: input_voltage_error
+    ]
+    |> Enum.filter(&(elem(&1, 1) == 1))
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  @spec encode_shutdown(
+          list(
+            :overload_error
+            | :electrical_shock_error
+            | :motor_encoder_error
+            | :overheating_error
+            | :overload_error
+            | :input_voltage_error
+          )
+        ) :: <<_::8>>
+  def encode_shutdown(flags) do
+    <<Enum.reduce(flags, 0, fn
+        :overload_error, acc -> acc ||| 1 <<< 5
+        :electrical_shock_error, acc -> acc ||| 1 <<< 4
+        :motor_encoder_error, acc -> acc ||| 1 <<< 3
+        :overheating_error, acc -> acc ||| 1 <<< 2
+        :input_voltage_error, acc -> acc ||| 1
+      end)>>
   end
 
   @tables %{

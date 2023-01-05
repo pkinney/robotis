@@ -11,4 +11,5 @@
   "mimic": {:hex, :mimic, "1.7.4", "cd2772ffbc9edefe964bc668bfd4059487fa639a5b7f1cbdf4fd22946505aa4f", [:mix], [], "hexpm", "437c61041ecf8a7fae35763ce89859e4973bb0666e6ce76d75efc789204447c3"},
   "mock": {:hex, :mock, "0.3.7", "75b3bbf1466d7e486ea2052a73c6e062c6256fb429d6797999ab02fa32f29e03", [:mix], [{:meck, "~> 0.9.2", [hex: :meck, repo: "hexpm", optional: false]}], "hexpm", "4da49a4609e41fd99b7836945c26f373623ea968cfb6282742bcb94440cf7e5c"},
   "resolve": {:hex, :resolve, "0.1.0", "4529d9b8d9508a71c4a163f7dee72d5028234cfa11d7ad0cff7ed43aef17758e", [:mix], [], "hexpm", "f8a453cef34282148e9b6583ec0207b574d4faa609ba713cebe25e108cf21aa9"},
+  "stream_data": {:hex, :stream_data, "0.5.0", "b27641e58941685c75b353577dc602c9d2c12292dd84babf506c2033cd97893e", [:mix], [], "hexpm", "012bd2eec069ada4db3411f9115ccafa38540a3c78c4c0349f151fc761b9e271"},
 }

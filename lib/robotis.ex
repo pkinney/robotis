@@ -2,17 +2,9 @@ defmodule Robotis do
   use GenServer
 
   require Logger
-  alias Robotis.{Comm, ControlTable, Servo, Ping}
+  alias Robotis.{Comm, ControlTable, Ping}
 
   @options ~w(uart_port baud)a
-
-  @default_servo_config %{
-    reverse: false,
-    profile: :velocity_based,
-    min_angle_limit: 0.0,
-    max_angle_limit: 360.0
-  }
-  @poll_interval 10
 
   @type connect() :: %{uart: pid()}
   @type param() :: __MODULE__.ControlTable.param()
@@ -90,8 +82,11 @@ defmodule Robotis do
     Comm.read(state.connect, servo_id, address, length)
     |> case do
       {:ok, resp, _} ->
-        value = ControlTable.decode_param(param, resp)
-        {:reply, {:ok, value}, state}
+        ControlTable.decode_param(param, resp)
+        |> case do
+          {:ok, value} -> {:reply, {:ok, value}, state}
+          err -> {:reply, err, state}
+        end
 
       e ->
         e
@@ -115,8 +110,23 @@ defmodule Robotis do
 
   @impl true
   def handle_cast({:write, servo_id, param, value}, state) do
-    {address, _, bytes} = ControlTable.encode_param(param, value) |> IO.inspect()
+    {:ok, address, bytes} = ControlTable.encode_param(param, value)
     :ok = Comm.write(state.connect, servo_id, address, bytes)
+    {:noreply, state}
+  end
+
+  def handle_cast({:factory_reset, servo_id}, state) do
+    :ok = Comm.factory_reset(state.connect, servo_id)
+    {:noreply, state}
+  end
+
+  def handle_cast({:reboot, servo_id}, state) do
+    :ok = Comm.reboot(state.connect, servo_id)
+    {:noreply, state}
+  end
+
+  def handle_cast({:clear, servo_id}, state) do
+    :ok = Comm.clear(state.connect, servo_id)
     {:noreply, state}
   end
 end

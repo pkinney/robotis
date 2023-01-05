@@ -143,4 +143,108 @@ defmodule RobotisTest do
     assert {:error, :unconvertable_value} =
              Robotis.write(pid, 1, :operating_mode, {:time_based, false}, true)
   end
+
+  test "should write a boolean value" do
+    replay =
+      Replay.UART.replay([
+        {:write, <<255, 255, 253, 0, 1, 6, 0, 3, 64, 0, 1, 0xDB, 0x66>>},
+        {:write, <<255, 255, 253, 0, 1, 6, 0, 3, 64, 0, 0, 0xDE, 0xE6>>}
+      ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+
+    assert :ok = Robotis.write(pid, 1, :torque_enabled, true)
+    assert :ok = Robotis.write(pid, 1, :torque_enabled, false)
+    Replay.UART.await_complete(replay)
+  end
+
+  test "should write a function-encoded value" do
+    replay =
+      Replay.UART.replay([
+        {:write, <<255, 255, 253, 0, 1, 6, 0, 3, 63, 0, 0x24, 0x09, 0x60>>},
+        {:write, <<255, 255, 253, 0, 1, 6, 0, 3, 63, 0, 0x20, 0x12, 0xE0>>}
+      ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+
+    assert :ok = Robotis.write(pid, 1, :shutdown, [:overload_error, :overheating_error])
+    assert :ok = Robotis.write(pid, 1, :shutdown, [:overload_error])
+    Replay.UART.await_complete(replay)
+  end
+
+  test "should read a mapping value" do
+    Replay.UART.replay([
+      {:write, <<255, 255, 253, 0, 1, 7, 0, 2, 10, 0, 1, 0, 33, 211>>},
+      {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x05, 0x00, 0x55, 0x00, 0x05, 0x4D, 0x21>>}
+    ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    assert {:ok, {:time_based, true}} = Robotis.read(pid, 1, :drive_mode)
+  end
+
+  test "should read a function-encoded value" do
+    Replay.UART.replay([
+      {:write, <<255, 255, 253, 0, 1, 7, 0, 2, 63, 0, 1, 0, 43, 87>>},
+      {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x05, 0x00, 0x55, 0x00, 0x35, 0xED, 0x21>>}
+    ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+
+    assert {:ok, shutdown} = Robotis.read(pid, 1, :shutdown)
+
+    assert shutdown == [
+             :overload_error,
+             :electrical_shock_error,
+             :overheating_error,
+             :input_voltage_error
+           ]
+  end
+
+  test "should read a boolean value" do
+    Replay.UART.replay([
+      {:write, <<255, 255, 253, 0, 1, 7, 0, 2, 64, 0, 1, 0, 0x3C, 0xDB>>},
+      {:read, <<255, 255, 253, 0, 1, 5, 0, 0x55, 0, 1, 0x56, 0xA1>>}
+    ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    assert {:ok, true} = Robotis.read(pid, 1, :torque_enabled)
+  end
+
+  test "should factory reset a device" do
+    replay =
+      Replay.UART.replay([
+        {:write, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x04, 0x00, 0x06, 0x02, 0xAB, 0xE6>>}
+      ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+
+    assert :ok = Robotis.factory_reset(pid, 1)
+    Replay.UART.await_complete(replay)
+  end
+
+  test "should reboot a device" do
+    replay =
+      Replay.UART.replay([
+        {:write, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x03, 0x00, 0x08, 0x2F, 0x4E>>}
+      ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+
+    assert :ok = Robotis.reboot(pid, 1)
+    Replay.UART.await_complete(replay)
+  end
+
+  test "should clear the rotational position a device" do
+    replay =
+      Replay.UART.replay([
+        {:write,
+         <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x08, 0x00, 0x10, 0x01, 0x44, 0x58, 0x4C, 0x22, 0xB1,
+           0xDC>>}
+      ])
+
+    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+
+    assert :ok = Robotis.clear(pid, 1)
+    Replay.UART.await_complete(replay)
+  end
 end

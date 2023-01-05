@@ -79,14 +79,19 @@ defmodule Robotis.Comm do
     end
   end
 
-  @spec reset(Robotis.connect(), servo_id(), byte()) :: :ok | {:error, any()}
-  def reset(servo, id, param \\ 0x02) do
+  @spec factory_reset(Robotis.connect(), servo_id(), byte()) :: :ok | {:error, any()}
+  def factory_reset(servo, id, param \\ 0x02) do
     build_message(0x06, id, <<param>>) |> send_uart(servo)
   end
 
   @spec reboot(Robotis.connect(), servo_id()) :: :ok | {:error, any()}
   def reboot(servo, id) do
     build_message(0x08, id) |> send_uart(servo)
+  end
+
+  @spec clear(Robotis.connect(), servo_id()) :: :ok | {:error, any()}
+  def clear(servo, id) do
+    build_message(0x10, id, <<0x01, 0x44, 0x58, 0x4C, 0x22>>) |> send_uart(servo)
   end
 
   defp build_message(instruction, id, params \\ "") do
@@ -101,7 +106,6 @@ defmodule Robotis.Comm do
 
   defp receive_one(connect) do
     res = do_receive_one(connect, "")
-    # Logger.info("[#{__MODULE__}] Received #{inspect(res, base: :hex)}")
     res
   end
 
@@ -166,8 +170,8 @@ defmodule Robotis.Comm do
     # Logger.info("[#{__MODULE__}] Received packet: #{inspect(packet, base: :hex)}")
 
     with {:ok, body} <- CRC.validate_crc(packet),
-         {:ok, id, instruction, error, params} <- split_body(body),
-         :ok <- check_error(id, instruction, error, params) do
+         {:ok, id, _, error, params} <- split_body(body),
+         :ok <- check_error(error) do
       {:ok, params, id}
     end
   end
@@ -194,10 +198,8 @@ defmodule Robotis.Comm do
     end
   end
 
-  defp check_error(_, _, 0x00, _), do: :ok
-
-  defp check_error(id, instruction, err, params),
-    do: {:error, decode_error(<<err>>)}
+  defp check_error(0x00), do: :ok
+  defp check_error(err), do: {:error, decode_error(err)}
 
   defp decode_error(<<0>>), do: :ok
   defp decode_error(<<1::1, _::7>>), do: :hardware_alert

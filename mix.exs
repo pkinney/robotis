@@ -26,6 +26,7 @@ defmodule Robotis.MixProject do
       {:resolve, "~> 0.1"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:stream_data, "~> 0.5", only: :test},
       {:replay, path: "../replay", only: :test}
     ]
   end
