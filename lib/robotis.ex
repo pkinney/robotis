@@ -114,6 +114,7 @@ defmodule Robotis do
       Comm.fast_sync_read(state.connect, servos, address, length)
       |> Enum.map(fn
         {:ok, id, params} -> {id, ControlTable.decode_param(param, params)}
+        {error, id, _} -> {id, {:error, error}}
         e -> e
       end)
 
