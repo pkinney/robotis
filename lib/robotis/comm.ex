@@ -62,23 +62,6 @@ defmodule Robotis.Comm do
     receive_one(connect)
   end
 
-  @spec fast_sync_read(Robotis.connect(), list(servo_id()), byte(), non_neg_integer) ::
-          list(result())
-  def fast_sync_read(connect, ids, address, length) do
-    params =
-      Utils.encode_int(address, 2) <> Utils.encode_int(length, 2) <> :binary.list_to_bin(ids)
-
-    msg = build_message(0x8A, 0xFE, params)
-
-    with :ok <- send_uart(msg, connect),
-         {:ok, resp, _, _} <- receive_one(connect),
-         responses <- decode_fast_sync_read_response(<<0>> <> resp, length) do
-      responses
-    else
-      _ -> Enum.map(ids, &{:error, &1, nil})
-    end
-  end
-
   @spec factory_reset(Robotis.connect(), servo_id(), byte()) :: :ok | {:error, any()}
   def factory_reset(servo, id, param \\ 0x02) do
     build_message(0x06, id, <<param>>) |> send_uart(servo)
@@ -92,6 +75,38 @@ defmodule Robotis.Comm do
   @spec clear(Robotis.connect(), servo_id()) :: :ok | {:error, any()}
   def clear(servo, id) do
     build_message(0x10, id, <<0x01, 0x44, 0x58, 0x4C, 0x22>>) |> send_uart(servo)
+  end
+
+  @spec sync_write(Robotis.connect(), byte(), byte(), list({servo_id(), binary()})) ::
+          :ok | {:error, any()}
+  def sync_write(connect, address, length, params) do
+    start = Utils.encode_int(address, 2) <> Utils.encode_int(length, 2)
+
+    message =
+      params
+      |> Enum.reduce(start, fn {servo_id, params}, acc ->
+        acc <> Utils.encode_int(servo_id, 1) <> params
+      end)
+
+    build_message(0x83, 0xFE, message) |> send_uart(connect)
+    :ok
+  end
+
+  @spec fast_sync_read(Robotis.connect(), list(servo_id()), byte(), non_neg_integer) ::
+          list(result())
+  def fast_sync_read(connect, ids, address, length) do
+    params =
+      Utils.encode_int(address, 2) <> Utils.encode_int(length, 2) <> :binary.list_to_bin(ids)
+
+    msg = build_message(0x8A, 0xFE, params)
+
+    with :ok <- send_uart(msg, connect),
+         {:ok, resp, _} <- receive_one(connect),
+         responses <- decode_fast_sync_read_response(<<0>> <> resp, length) do
+      responses
+    else
+      _ -> Enum.map(ids, &{:error, &1, nil})
+    end
   end
 
   defp build_message(instruction, id, params \\ "") do

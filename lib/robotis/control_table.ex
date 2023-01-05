@@ -96,7 +96,7 @@ defmodule Robotis.ControlTable do
     Enum.find(map, &(elem(&1, 1) == value))
     |> case do
       {a, _} -> {:ok, a}
-      _ -> {:error, :no_decode, value}
+      _ -> {:error, :bad_decode}
     end
   end
 

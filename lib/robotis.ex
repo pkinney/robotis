@@ -38,10 +38,9 @@ defmodule Robotis do
   @spec clear(server(), servo_id()) :: :ok | {:error, any()}
   def clear(pid, servo), do: GenServer.cast(pid, {:clear, servo})
 
-  @spec sync_write(server(), param(), [{servo_id(), any()}]) ::
-          list({servo_id(), param(), :ok | {:error, any()}})
+  @spec sync_write(server(), param(), [{servo_id(), any()}]) :: :ok | {:error, any()}
   def sync_write(pid, param, servos_and_values),
-    do: GenServer.call(pid, {:sync_write, param, servos_and_values})
+    do: GenServer.cast(pid, {:sync_write, param, servos_and_values})
 
   @spec fast_sync_read(server(), [servo_id()], param()) ::
           list({servo_id(), {:ok, any()} | {:error, any()}})
@@ -108,6 +107,19 @@ defmodule Robotis do
     end
   end
 
+  def handle_call({:fast_sync_read, servos, param}, _, state) do
+    {address, length} = ControlTable.address_and_length_for_param(param)
+
+    resp =
+      Comm.fast_sync_read(state.connect, servos, address, length)
+      |> Enum.map(fn
+        {:ok, id, params} -> {id, ControlTable.decode_param(param, params)}
+        e -> e
+      end)
+
+    {:reply, resp, state}
+  end
+
   @impl true
   def handle_cast({:write, servo_id, param, value}, state) do
     {:ok, address, bytes} = ControlTable.encode_param(param, value)
@@ -127,6 +139,20 @@ defmodule Robotis do
 
   def handle_cast({:clear, servo_id}, state) do
     :ok = Comm.clear(state.connect, servo_id)
+    {:noreply, state}
+  end
+
+  def handle_cast({:sync_write, param, values}, state) do
+    {address, length} = ControlTable.address_and_length_for_param(param)
+
+    params =
+      values
+      |> Enum.map(fn {servo_id, value} ->
+        {:ok, _, bytes} = ControlTable.encode_param(param, value)
+        {servo_id, bytes}
+      end)
+
+    :ok = Comm.sync_write(state.connect, address, length, params)
     {:noreply, state}
   end
 end
