@@ -19,12 +19,10 @@ defmodule Robotis.Comm do
 
   @header <<0xFF, 0xFF, 0xFD, 0x00>>
 
-  defp uart_mod(), do: Resolve.resolve(Circuits.UART)
-
   @spec open(String.t(), non_neg_integer()) :: {:ok, Robotis.connect()} | {:error, any()}
   def open(uart_port, speed) do
-    with {:ok, uart} <- uart_mod().start_link(),
-         :ok <- uart_mod().open(uart, uart_port, speed: speed, active: false) do
+    with {:ok, uart} <- Circuits.UART.start_link(),
+         :ok <- Circuits.UART.open(uart, uart_port, speed: speed, active: false) do
       {:ok, %{uart: uart}}
     end
   end
@@ -116,7 +114,7 @@ defmodule Robotis.Comm do
 
   defp send_uart(msg, connect) do
     # Logger.info("[#{__MODULE__}] Sending #{inspect(msg, base: :hex)}")
-    uart_mod().write(connect.uart, msg)
+    Circuits.UART.write(connect.uart, msg)
   end
 
   defp receive_one(connect) do
@@ -130,7 +128,7 @@ defmodule Robotis.Comm do
         decode_packet(packet)
 
       :incomplete ->
-        uart_mod().read(servo.uart, 100)
+        Circuits.UART.read(servo.uart, 100)
         |> case do
           {:ok, ""} ->
             {:error, :no_response}
@@ -157,7 +155,7 @@ defmodule Robotis.Comm do
         [decode_packet(packet) | do_receive_many(servo, leftover)]
 
       :incomplete ->
-        uart_mod().read(servo.uart, 100)
+        Circuits.UART.read(servo.uart, 100)
         |> case do
           {:ok, ""} -> []
           {:ok, data} -> do_receive_many(servo, buffer <> data)

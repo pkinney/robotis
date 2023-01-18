@@ -1,3 +1,3 @@
-Replay.UART.setup()
+Replay.UART.setup(:mimic)
 
 ExUnit.start()

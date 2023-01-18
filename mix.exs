@@ -22,12 +22,11 @@ defmodule Robotis.MixProject do
   defp deps do
     [
       {:circuits_uart, "~> 1.0"},
-      # {:mimic, "~> 1.7", only: :test},
-      {:resolve, "~> 0.1"},
+      {:mimic, "~> 1.7", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:stream_data, "~> 0.5", only: :test},
-      {:replay, path: "../replay", only: :test}
+      {:replay, "~> 0.1", only: :test}
     ]
   end
 end
