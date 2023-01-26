@@ -153,8 +153,8 @@ defmodule RobotisTest do
 
     {:ok, pid} = Robotis.start_link(uart_port: "mock")
 
-    assert :ok = Robotis.write(pid, 1, :torque_enabled, true)
-    assert :ok = Robotis.write(pid, 1, :torque_enabled, false)
+    assert :ok = Robotis.write(pid, 1, :torque_enable, true)
+    assert :ok = Robotis.write(pid, 1, :torque_enable, false)
     Replay.await_complete(replay)
   end
 
@@ -207,7 +207,7 @@ defmodule RobotisTest do
     ])
 
     {:ok, pid} = Robotis.start_link(uart_port: "mock")
-    assert {:ok, true} = Robotis.read(pid, 1, :torque_enabled)
+    assert {:ok, true} = Robotis.read(pid, 1, :torque_enable)
   end
 
   test "should factory reset a device" do
