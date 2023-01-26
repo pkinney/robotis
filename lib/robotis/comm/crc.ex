@@ -1,4 +1,5 @@
 defmodule Robotis.Comm.CRC do
+  @moduledoc false
   import Bitwise
 
   @crc [:code.priv_dir(:robotis), "crc.bin"]

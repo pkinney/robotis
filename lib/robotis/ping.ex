@@ -1,4 +1,5 @@
 defmodule Robotis.Ping do
+  @moduledoc false
   require Logger
   alias Robotis.{Comm, Utils}
 

@@ -1,8 +1,10 @@
 defmodule Robotis.Comm do
+  @moduledoc false
+
   require Logger
   import Bitwise
   alias Robotis.Comm.CRC
-  alias Robotis.{Ping, Utils}
+  alias Robotis.Utils
 
   @type servo_error() ::
           :hardware_alert

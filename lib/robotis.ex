@@ -1,4 +1,7 @@
 defmodule Robotis do
+  @moduledoc """
+  Driver for interfacing with Robotis Dynmixel servos.
+  """
   use GenServer
 
   require Logger
@@ -60,10 +63,9 @@ defmodule Robotis do
   def init(opts) do
     port = Keyword.fetch!(opts, :uart_port)
     baud = Keyword.get(opts, :baud, 57_600)
-    servos = Keyword.get(opts, :servos, %{})
     {:ok, connect} = Comm.open(port, baud)
 
-    {:ok, %{connect: connect, servos: servos}}
+    {:ok, %{connect: connect}}
   end
 
   @impl true

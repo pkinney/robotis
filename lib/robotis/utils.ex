@@ -1,4 +1,5 @@
 defmodule Robotis.Utils do
+  @moduledoc false
   import Bitwise
 
   def encode_boolean(true), do: <<1>>

@@ -1,4 +1,5 @@
 defmodule Robotis.ControlTable do
+  @moduledoc false
   alias Robotis.Utils
 
   import Bitwise
@@ -11,9 +12,7 @@ defmodule Robotis.ControlTable do
   @type param_info() :: {address(), length(), conversion()}
 
   @spec info_for_param(param()) :: param_info()
-  def info_for_param(param), do: control_table() |> Map.get(param)
-
-  def control_table(), do: __MODULE__.Tables.table(:xl330_m288)
+  def info_for_param(param), do: __MODULE__.Tables.table(:xl330_m288) |> Map.get(param)
 
   @spec address_and_length_for_param(param()) :: {address(), length()}
   def address_and_length_for_param(param) do
