@@ -27,7 +27,7 @@ defmodule Robotis.MixProject do
       {:circuits_uart, "~> 1.0"},
       {:mimic, "~> 1.7", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:stream_data, "~> 0.5", only: [:dev, :test]},
       {:replay, "~> 0.1", only: :test}
     ]
