@@ -1,5 +1,9 @@
 # Robotis
 
+![Build Status](https://github.com/pkinney/robotis/actions/workflows/ci.yaml/badge.svg)
+[![Hex.pm](https://img.shields.io/hexpm/v/robotis.svg)](https://hex.pm/packages/robotis)
+[![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/robotis)
+
 Driver for interfacing with Robotis Dynamixel servos.
 
 This is a work in progress and currently only supports XL330 and devices with the same Control Table. It also only speaks Dynamixel protocol v2.
