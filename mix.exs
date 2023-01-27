@@ -4,7 +4,7 @@ defmodule Robotis.MixProject do
   def project do
     [
       app: :robotis,
-      version: "0.1.0",
+      version: "0.1.1",
       description: description(),
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
@@ -42,7 +42,7 @@ defmodule Robotis.MixProject do
 
   defp package do
     [
-      files: ["lib", "mix.exs", "README*"],
+      files: ["lib", "mix.exs", "priv/crc.bin", "README*"],
       maintainers: ["Powell Kinney"],
       licenses: ["MIT"],
       links: %{

@@ -18,7 +18,7 @@ the `usb_to_dynamixel` sketch.
 ```elixir
 def deps do
   [
-    {:robotis, "~> 0.1.0"}
+    {:robotis, "~> 0.1.1"}
   ]
 end
 ```
