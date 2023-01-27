@@ -6,7 +6,7 @@ defmodule Robotis.MixProject do
       app: :robotis,
       version: "0.1.0",
       description: description(),
-      elixir: "~> 1.12",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
@@ -29,7 +29,8 @@ defmodule Robotis.MixProject do
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:stream_data, "~> 0.5", only: [:dev, :test]},
-      {:replay, "~> 0.1", only: :test}
+      {:replay, "~> 0.1", only: :test},
+      {:ex_doc, "~> 0.19", only: :dev}
     ]
   end
 
