@@ -41,7 +41,7 @@ defmodule Robotis.ControlTable do
       {mod, _, fun} -> apply(mod, fun, [value])
     end
     |> case do
-      nil -> {:error, :unconvertable_value}
+      nil -> {:error, :unconvertible_value}
       bytes -> {:ok, address, bytes}
     end
   end

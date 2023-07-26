@@ -140,7 +140,7 @@ defmodule RobotisTest do
 
     {:ok, pid} = Robotis.start_link(uart_port: "mock")
 
-    assert {:error, :unconvertable_value} =
+    assert {:error, :unconvertible_value} =
              Robotis.write(pid, 1, :operating_mode, {:time_based, false}, true)
   end
 

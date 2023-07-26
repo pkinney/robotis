@@ -1,6 +1,6 @@
 defmodule Robotis do
   @moduledoc """
-  Driver for interfacing with Robotis Dynmixel servos.
+  Driver for interfacing with Robotis Dynamixel servos.
   """
   use GenServer
 
