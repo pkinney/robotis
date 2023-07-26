@@ -1,42 +1,28 @@
 defmodule Robotis.Comm.CRC do
   @moduledoc false
-  import Bitwise
 
-  @crc [:code.priv_dir(:robotis), "crc.bin"]
-       |> Path.join()
-       |> File.read!()
-       |> :erlang.binary_to_term()
+  # The Dynamixel protocol2 uses a CRC16 with polynomial 0x8005 and initial value of 0.
+  # This is the same as the CRC16-Buypass variant.
+  @crc :cerlc.init(:crc16_buypass)
 
+  @spec append_crc(binary()) :: binary()
   def append_crc(msg) do
-    msg <> (msg |> crc() |> encode_crc())
+    <<msg::binary, crc(msg)::little-16>>
   end
 
+  @spec validate_crc(binary()) :: {:ok, binary()} | {:error, :invalid_crc}
   def validate_crc(packet) do
     body_size = byte_size(packet) - 2
-    <<body::binary-size(body_size), crc::binary-size(2)>> = packet
+    <<body::binary-size(body_size), crc::little-16>> = packet
 
-    if crc == crc(body) |> encode_crc() do
+    if crc == crc(body) do
       {:ok, body}
     else
       {:error, :invalid_crc}
     end
   end
 
-  def valid_crc?(body, crc) do
-    crc == crc(body) |> encode_crc()
-  end
-
   defp crc(msg) do
-    msg
-    |> :binary.bin_to_list()
-    |> Enum.reduce(0, fn j, acc ->
-      i = bxor(acc >>> 8, j) &&& 0xFF
-      bxor(acc <<< 8, @crc |> Enum.at(i))
-    end) &&&
-      0xFFFF
-  end
-
-  defp encode_crc(i) do
-    <<i &&& 0xFF, i >>> 8 &&& 0xFF>>
+    :cerlc.calc_crc(msg, @crc)
   end
 end
