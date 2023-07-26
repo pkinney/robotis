@@ -46,8 +46,7 @@ defmodule Robotis.MixProject do
       maintainers: ["Powell Kinney"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/pkinney/robotis",
-        "Docs" => "https://hexdocs.pm/pid_control/Robotis.html"
+        "GitHub" => "https://github.com/pkinney/robotis"
       }
     ]
   end
