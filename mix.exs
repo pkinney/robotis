@@ -25,6 +25,7 @@ defmodule Robotis.MixProject do
   defp deps do
     [
       {:circuits_uart, "~> 1.0"},
+      {:cerlc, "~> 0.2"},
       {:mimic, "~> 1.7", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
@@ -42,7 +43,7 @@ defmodule Robotis.MixProject do
 
   defp package do
     [
-      files: ["lib", "mix.exs", "priv/crc.bin", "README*"],
+      files: ["lib", "mix.exs", "README*"],
       maintainers: ["Powell Kinney"],
       licenses: ["MIT"],
       links: %{
