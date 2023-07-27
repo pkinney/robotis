@@ -11,7 +11,7 @@ defmodule RobotisTest do
          <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x07, 0x00, 0x55, 0x00, 0xB0, 0x04, 0x31, 0xAC, 0xD4>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert {:ok, ping_response} = Robotis.ping(pid, 0x01)
     assert ping_response.firmware == 49
     assert ping_response.id == 1
@@ -24,7 +24,7 @@ defmodule RobotisTest do
     replay =
       Replay.replay_uart([{:write, <<255, 255, 253, 0, 1, 3, 0, 1, 25, 78>>}, {:read, <<>>}])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert {:error, :no_response} = Robotis.ping(pid, 0x01)
     Replay.assert_complete(replay)
   end
@@ -41,7 +41,7 @@ defmodule RobotisTest do
         {:read, <<>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     responses = Robotis.ping(pid)
 
     assert Enum.member?(
@@ -66,7 +66,7 @@ defmodule RobotisTest do
          0xC0>>}
     ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert {:ok, 14.58984375} = Robotis.read(pid, 1, :present_position)
   end
 
@@ -77,7 +77,7 @@ defmodule RobotisTest do
          0x89>>}
     ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     value = Robotis.ControlTable.decode_param(:goal_position, <<0x00, 0x02, 0x00, 0x00>>)
     assert :ok = Robotis.write(pid, 1, :goal_position, value)
   end
@@ -91,7 +91,7 @@ defmodule RobotisTest do
         {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x04, 0x00, 0x55, 0x00, 0xA1, 0x0C>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert :ok = Robotis.write(pid, 1, :goal_position, 45.0, true)
     Replay.assert_complete(replay)
@@ -106,7 +106,7 @@ defmodule RobotisTest do
         {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x04, 0x00, 0x55, 0x06, 0xA1, 0x0C>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert {:error, :invalid_crc} = Robotis.write(pid, 1, :goal_position, 45.0, true)
     Replay.assert_complete(replay)
@@ -119,7 +119,7 @@ defmodule RobotisTest do
         {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x04, 0x00, 0x55, 0x06, 181, 12>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert {:error, :data_limit_error} = Robotis.write(pid, 1, :goal_position, -150.0, true)
     Replay.assert_complete(replay)
@@ -131,14 +131,14 @@ defmodule RobotisTest do
       {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x04, 0x00, 0x55, 0x00, 0xA1, 0x0C>>}
     ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert :ok = Robotis.write(pid, 1, :drive_mode, {:time_based, false}, true)
   end
 
   test "should return an error for an invalid mapping value" do
     Replay.replay_uart([])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert {:error, :unconvertible_value} =
              Robotis.write(pid, 1, :operating_mode, {:time_based, false}, true)
@@ -151,7 +151,7 @@ defmodule RobotisTest do
         {:write, <<255, 255, 253, 0, 1, 6, 0, 3, 64, 0, 0, 0xDE, 0xE6>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert :ok = Robotis.write(pid, 1, :torque_enable, true)
     assert :ok = Robotis.write(pid, 1, :torque_enable, false)
@@ -165,7 +165,7 @@ defmodule RobotisTest do
         {:write, <<255, 255, 253, 0, 1, 6, 0, 3, 63, 0, 0x20, 0x12, 0xE0>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert :ok = Robotis.write(pid, 1, :shutdown, [:overload_error, :overheating_error])
     assert :ok = Robotis.write(pid, 1, :shutdown, [:overload_error])
@@ -178,7 +178,7 @@ defmodule RobotisTest do
       {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x05, 0x00, 0x55, 0x00, 0x05, 0x4D, 0x21>>}
     ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert {:ok, {:time_based, true}} = Robotis.read(pid, 1, :drive_mode)
   end
 
@@ -188,7 +188,7 @@ defmodule RobotisTest do
       {:read, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x05, 0x00, 0x55, 0x00, 0x35, 0xED, 0x21>>}
     ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert {:ok, shutdown} = Robotis.read(pid, 1, :shutdown)
 
@@ -206,7 +206,7 @@ defmodule RobotisTest do
       {:read, <<255, 255, 253, 0, 1, 5, 0, 0x55, 0, 1, 0x56, 0xA1>>}
     ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert {:ok, true} = Robotis.read(pid, 1, :torque_enable)
   end
 
@@ -216,7 +216,7 @@ defmodule RobotisTest do
         {:write, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x04, 0x00, 0x06, 0x02, 0xAB, 0xE6>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert :ok = Robotis.factory_reset(pid, 1)
     Replay.await_complete(replay)
@@ -228,7 +228,7 @@ defmodule RobotisTest do
         {:write, <<0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x03, 0x00, 0x08, 0x2F, 0x4E>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert :ok = Robotis.reboot(pid, 1)
     Replay.await_complete(replay)
@@ -242,7 +242,7 @@ defmodule RobotisTest do
            0xDC>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert :ok = Robotis.clear(pid, 1)
     Replay.await_complete(replay)
   end
@@ -255,7 +255,7 @@ defmodule RobotisTest do
            0x0, 0x2, 0xC7, 0x5, 0x0, 0x0, 0x92, 0x80>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
     assert :ok = Robotis.sync_write(pid, :goal_position, [{0x01, 45}, {0x02, 130}])
     Replay.await_complete(replay)
   end
@@ -273,7 +273,7 @@ defmodule RobotisTest do
         {:read, <<0x00, 0x04, 0xFF, 0x03, 0x00, 0x00, 0xD1, 0x9E>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert [{3, {:ok, 14.58984375}}, {7, {:ok, 182.724609375}}, {4, {:ok, 89.912109375}}] ==
              Robotis.fast_sync_read(pid, [0x03, 0x07, 0x04], :present_position)
@@ -294,7 +294,7 @@ defmodule RobotisTest do
         {:read, <<0x00, 0x04, 0xFF, 0x03, 0x00, 0x00, 0xA8, 0x73>>}
       ])
 
-    {:ok, pid} = Robotis.start_link(uart_port: "mock")
+    pid = start_supervised!({Robotis, uart_port: "mock"})
 
     assert [{3, {:ok, 14.58984375}}, {7, {:error, :instruction_error}}, {4, {:ok, 89.912109375}}] ==
              Robotis.fast_sync_read(pid, [0x03, 0x07, 0x04], :present_position)
