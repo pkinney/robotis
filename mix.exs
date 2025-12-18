@@ -27,11 +27,11 @@ defmodule Robotis.MixProject do
       {:circuits_uart, "~> 1.0"},
       {:cerlc, "~> 0.2"},
       {:mimic, "~> 1.7", only: :test},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:stream_data, "~> 0.5", only: [:dev, :test]},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:stream_data, "~> 1.0", only: [:dev, :test]},
       {:replay, "~> 0.1", only: :test},
-      {:ex_doc, "~> 0.19", only: :dev}
+      {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
 

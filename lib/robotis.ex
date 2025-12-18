@@ -7,7 +7,7 @@ defmodule Robotis do
   require Logger
   alias Robotis.{Comm, ControlTable, Ping}
 
-  @options ~w(uart_port baud)a
+  @options ~w(uart_port baud control_table)a
 
   @type connect() :: %{uart: pid()}
   @type param() :: __MODULE__.ControlTable.param()
@@ -63,9 +63,10 @@ defmodule Robotis do
   def init(opts) do
     port = Keyword.fetch!(opts, :uart_port)
     baud = Keyword.get(opts, :baud, 57_600)
+    control_table = Keyword.get(opts, :control_table, :xl330_m288)
     {:ok, connect} = Comm.open(port, baud)
 
-    {:ok, %{connect: connect}}
+    {:ok, %{connect: connect, control_table: control_table}}
   end
 
   @impl true
@@ -78,12 +79,12 @@ defmodule Robotis do
   end
 
   def handle_call({:read, servo_id, param}, _, state) do
-    {address, length} = ControlTable.address_and_length_for_param(param)
+    {address, length} = ControlTable.address_and_length_for_param(state.control_table, param)
 
     Comm.read(state.connect, servo_id, address, length)
     |> case do
       {:ok, resp, _} ->
-        ControlTable.decode_param(param, resp)
+        ControlTable.decode_param(state.control_table, param, resp)
         |> case do
           {:ok, value} -> {:reply, {:ok, value}, state}
           err -> {:reply, err, state}
@@ -95,7 +96,7 @@ defmodule Robotis do
   end
 
   def handle_call({:write, servo_id, param, value}, _, state) do
-    ControlTable.encode_param(param, value)
+    ControlTable.encode_param(state.control_table, param, value)
     |> case do
       {:ok, address, bytes} ->
         Comm.write_and_await_status(state.connect, servo_id, address, bytes)
@@ -110,12 +111,12 @@ defmodule Robotis do
   end
 
   def handle_call({:fast_sync_read, servos, param}, _, state) do
-    {address, length} = ControlTable.address_and_length_for_param(param)
+    {address, length} = ControlTable.address_and_length_for_param(state.control_table, param)
 
     resp =
       Comm.fast_sync_read(state.connect, servos, address, length)
       |> Enum.map(fn
-        {:ok, id, params} -> {id, ControlTable.decode_param(param, params)}
+        {:ok, id, params} -> {id, ControlTable.decode_param(state.control_table, param, params)}
         {error, id, _} -> {id, {:error, error}}
         e -> e
       end)
@@ -125,7 +126,7 @@ defmodule Robotis do
 
   @impl true
   def handle_cast({:write, servo_id, param, value}, state) do
-    {:ok, address, bytes} = ControlTable.encode_param(param, value)
+    {:ok, address, bytes} = ControlTable.encode_param(state.control_table, param, value)
     :ok = Comm.write(state.connect, servo_id, address, bytes)
     {:noreply, state}
   end
@@ -146,12 +147,12 @@ defmodule Robotis do
   end
 
   def handle_cast({:sync_write, param, values}, state) do
-    {address, length} = ControlTable.address_and_length_for_param(param)
+    {address, length} = ControlTable.address_and_length_for_param(state.control_table, param)
 
     params =
       values
       |> Enum.map(fn {servo_id, value} ->
-        {:ok, _, bytes} = ControlTable.encode_param(param, value)
+        {:ok, _, bytes} = ControlTable.encode_param(state.control_table, param, value)
         {servo_id, bytes}
       end)
 
