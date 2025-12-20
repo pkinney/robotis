@@ -23,6 +23,14 @@ defmodule Robotis do
   @spec read(server(), servo_id(), param()) :: {:ok, any()} | {:error, any()}
   def read(pid, servo, param), do: GenServer.call(pid, {:read, servo, param})
 
+  @doc """
+  Read a parameter from a servo without applying unit conversion.
+
+  Returns the raw integer value from the servo's control table.
+  """
+  @spec read_raw(server(), servo_id(), param()) :: {:ok, integer()} | {:error, any()}
+  def read_raw(pid, servo, param), do: GenServer.call(pid, {:read_raw, servo, param})
+
   @spec write(server(), servo_id(), param(), any(), boolean()) :: :ok | {:error, any()}
   def write(pid, servo, param, value, await_status \\ false)
 
@@ -31,6 +39,20 @@ defmodule Robotis do
 
   def write(pid, servo, param, value, true),
     do: GenServer.call(pid, {:write, servo, param, value})
+
+  @doc """
+  Write a raw integer value to a servo parameter without applying unit conversion.
+
+  The value is written directly to the control table register.
+  """
+  @spec write_raw(server(), servo_id(), param(), integer(), boolean()) :: :ok | {:error, any()}
+  def write_raw(pid, servo, param, value, await_status \\ false)
+
+  def write_raw(pid, servo, param, value, false),
+    do: GenServer.cast(pid, {:write_raw, servo, param, value})
+
+  def write_raw(pid, servo, param, value, true),
+    do: GenServer.call(pid, {:write_raw, servo, param, value})
 
   @spec factory_reset(server(), servo_id()) :: :ok | {:error, any()}
   def factory_reset(pid, servo), do: GenServer.cast(pid, {:factory_reset, servo})
@@ -83,6 +105,9 @@ defmodule Robotis do
 
     Comm.read(state.connect, servo_id, address, length)
     |> case do
+      {:ok, "", _} ->
+        {:reply, {:error, :empty_response}, state}
+
       {:ok, resp, _} ->
         ControlTable.decode_param(state.control_table, param, resp)
         |> case do
@@ -92,6 +117,16 @@ defmodule Robotis do
 
       e ->
         e
+    end
+  end
+
+  def handle_call({:read_raw, servo_id, param}, _, state) do
+    {address, length} = ControlTable.address_and_length_for_param(state.control_table, param)
+
+    case Comm.read(state.connect, servo_id, address, length) do
+      {:ok, "", _} -> {:reply, {:error, :empty_response}, state}
+      {:ok, resp, _} -> {:reply, {:ok, Robotis.Utils.decode_int(resp)}, state}
+      e -> {:reply, e, state}
     end
   end
 
@@ -105,6 +140,16 @@ defmodule Robotis do
         e
     end
     |> case do
+      {:ok, "", _} -> {:reply, :ok, state}
+      {:error, error} -> {:reply, {:error, error}, state}
+    end
+  end
+
+  def handle_call({:write_raw, servo_id, param, value}, _, state) do
+    {address, length} = ControlTable.address_and_length_for_param(state.control_table, param)
+    bytes = Robotis.Utils.encode_int(value, length)
+
+    case Comm.write_and_await_status(state.connect, servo_id, address, bytes) do
       {:ok, "", _} -> {:reply, :ok, state}
       {:error, error} -> {:reply, {:error, error}, state}
     end
@@ -127,6 +172,13 @@ defmodule Robotis do
   @impl true
   def handle_cast({:write, servo_id, param, value}, state) do
     {:ok, address, bytes} = ControlTable.encode_param(state.control_table, param, value)
+    :ok = Comm.write(state.connect, servo_id, address, bytes)
+    {:noreply, state}
+  end
+
+  def handle_cast({:write_raw, servo_id, param, value}, state) do
+    {address, length} = ControlTable.address_and_length_for_param(state.control_table, param)
+    bytes = Robotis.Utils.encode_int(value, length)
     :ok = Comm.write(state.connect, servo_id, address, bytes)
     {:noreply, state}
   end

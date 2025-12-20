@@ -10,6 +10,8 @@ defmodule Robotis.Utils do
 
   def decode_boolean(<<0x00>>), do: false
   def decode_boolean(_), do: true
+  def decode_int(<<0::1, a::7>>), do: a
+  def decode_int(<<a>>), do: a - 256
   def decode_int(<<a, 0::1, b::7>>), do: a + (b <<< 8)
   def decode_int(<<a, b>>), do: -decode_int(<<bxor(a, 0xFF), bxor(b, 0xFF)>>)
   def decode_int(<<a, b, c, 0::1, d::7>>), do: a + (b <<< 8) + (c <<< 16) + (d <<< 24)
