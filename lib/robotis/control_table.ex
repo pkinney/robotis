@@ -8,7 +8,8 @@ defmodule Robotis.ControlTable do
 
   @type address() :: byte()
   @type length() :: non_neg_integer()
-  @type conversion() :: :bool | number() | {module(), atom(), atom() | nil} | list({any(), binary()}) | nil
+  @type conversion() ::
+          :bool | number() | {module(), atom(), atom() | nil} | list({any(), binary()}) | nil
   @type param_info() :: {address(), length(), conversion()} | {address(), length()}
 
   @callback table() :: %{param() => param_info()}
