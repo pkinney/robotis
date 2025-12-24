@@ -2,6 +2,8 @@ defmodule Robotis.ControlTable.XL330 do
   @moduledoc """
   Control table for XL330-M288 series servos.
   """
+  import Bitwise
+
   @behaviour Robotis.ControlTable
 
   @velocity_factor 0.229
@@ -67,7 +69,7 @@ defmodule Robotis.ControlTable.XL330 do
       min_angle_limit: {52, 4, @position_factor},
       startup_configuration: {60, 1, nil},
       pwm_slope: {62, 1, 1.977},
-      shutdown: {63, 1, {Robotis.ControlTable, :xl330_decode_shutdown, :xl330_encode_shutdown}},
+      shutdown: {63, 1, {__MODULE__, :xl330_decode_shutdown, :xl330_encode_shutdown}},
       torque_enable: {64, 1, :bool},
       led: {65, 1, :bool},
       status_return_level: {68, 1, [{:ping, <<0>>}, {:ping_read, <<1>>}, {:all, <<2>>}]},
@@ -140,5 +142,49 @@ defmodule Robotis.ControlTable.XL330 do
       indirect_data_19: {226, 1, 1},
       indirect_data_20: {227, 1, 1}
     }
+  end
+
+  @spec xl330_decode_shutdown(<<_::8>>) ::
+          list(
+            :overload_error
+            | :electrical_shock_error
+            | :motor_encoder_error
+            | :overheating_error
+            | :overload_error
+            | :input_voltage_error
+          )
+  def xl330_decode_shutdown(
+        <<0::2, overload_error::1, electrical_shock_error::1, motor_encoder_error::1,
+          overheating_error::1, _::1, input_voltage_error::1>>
+      ) do
+    [
+      overload_error: overload_error,
+      electrical_shock_error: electrical_shock_error,
+      motor_encoder_error: motor_encoder_error,
+      overheating_error: overheating_error,
+      input_voltage_error: input_voltage_error
+    ]
+    |> Enum.filter(&(elem(&1, 1) == 1))
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  @spec xl330_encode_shutdown(
+          list(
+            :overload_error
+            | :electrical_shock_error
+            | :motor_encoder_error
+            | :overheating_error
+            | :overload_error
+            | :input_voltage_error
+          )
+        ) :: <<_::8>>
+  def xl330_encode_shutdown(flags) do
+    <<Enum.reduce(flags, 0, fn
+        :overload_error, acc -> acc ||| 1 <<< 5
+        :electrical_shock_error, acc -> acc ||| 1 <<< 4
+        :motor_encoder_error, acc -> acc ||| 1 <<< 3
+        :overheating_error, acc -> acc ||| 1 <<< 2
+        :input_voltage_error, acc -> acc ||| 1
+      end)>>
   end
 end

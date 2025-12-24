@@ -2,8 +2,6 @@ defmodule Robotis.ControlTable do
   @moduledoc false
   alias Robotis.Utils
 
-  import Bitwise
-
   @type param() :: atom()
 
   @type address() :: byte()
@@ -96,91 +94,5 @@ defmodule Robotis.ControlTable do
       in_progress: in_progress == 1,
       arrived: arrived == 1
     }
-  end
-
-  @spec xl330_decode_shutdown(<<_::8>>) ::
-          list(
-            :overload_error
-            | :electrical_shock_error
-            | :motor_encoder_error
-            | :overheating_error
-            | :overload_error
-            | :input_voltage_error
-          )
-  def xl330_decode_shutdown(
-        <<0::2, overload_error::1, electrical_shock_error::1, motor_encoder_error::1,
-          overheating_error::1, _::1, input_voltage_error::1>>
-      ) do
-    [
-      overload_error: overload_error,
-      electrical_shock_error: electrical_shock_error,
-      motor_encoder_error: motor_encoder_error,
-      overheating_error: overheating_error,
-      input_voltage_error: input_voltage_error
-    ]
-    |> Enum.filter(&(elem(&1, 1) == 1))
-    |> Enum.map(&elem(&1, 0))
-  end
-
-  @spec xl330_encode_shutdown(
-          list(
-            :overload_error
-            | :electrical_shock_error
-            | :motor_encoder_error
-            | :overheating_error
-            | :overload_error
-            | :input_voltage_error
-          )
-        ) :: <<_::8>>
-  def xl330_encode_shutdown(flags) do
-    <<Enum.reduce(flags, 0, fn
-        :overload_error, acc -> acc ||| 1 <<< 5
-        :electrical_shock_error, acc -> acc ||| 1 <<< 4
-        :motor_encoder_error, acc -> acc ||| 1 <<< 3
-        :overheating_error, acc -> acc ||| 1 <<< 2
-        :input_voltage_error, acc -> acc ||| 1
-      end)>>
-  end
-
-  @spec xm430_decode_shutdown(<<_::8>>) ::
-          list(
-            :overload_error
-            | :electrical_shock_error
-            | :motor_encoder_error
-            | :overheating_error
-            | :input_voltage_error
-          )
-  def xm430_decode_shutdown(
-        <<0::2, overload_error::1, electrical_shock_error::1, motor_encoder_error::1,
-          overheating_error::1, _::1, input_voltage_error::1>>
-      ) do
-    [
-      overload_error: overload_error,
-      electrical_shock_error: electrical_shock_error,
-      motor_encoder_error: motor_encoder_error,
-      overheating_error: overheating_error,
-      input_voltage_error: input_voltage_error
-    ]
-    |> Enum.filter(&(elem(&1, 1) == 1))
-    |> Enum.map(&elem(&1, 0))
-  end
-
-  @spec xm430_encode_shutdown(
-          list(
-            :overload_error
-            | :electrical_shock_error
-            | :motor_encoder_error
-            | :overheating_error
-            | :input_voltage_error
-          )
-        ) :: <<_::8>>
-  def xm430_encode_shutdown(flags) do
-    <<Enum.reduce(flags, 0, fn
-        :overload_error, acc -> acc ||| 1 <<< 5
-        :electrical_shock_error, acc -> acc ||| 1 <<< 4
-        :motor_encoder_error, acc -> acc ||| 1 <<< 3
-        :overheating_error, acc -> acc ||| 1 <<< 2
-        :input_voltage_error, acc -> acc ||| 1
-      end)>>
   end
 end

@@ -8,11 +8,11 @@ defmodule Robotis.ControlTableTest do
     check all shutdown <- integer(0..63) do
       flags =
         <<shutdown>>
-        |> ControlTable.xl330_decode_shutdown()
+        |> ControlTable.XL330.xl330_decode_shutdown()
 
       assert flags
-             |> ControlTable.xl330_encode_shutdown()
-             |> ControlTable.xl330_decode_shutdown() ==
+             |> ControlTable.XL330.xl330_encode_shutdown()
+             |> ControlTable.XL330.xl330_decode_shutdown() ==
                flags
     end
   end
