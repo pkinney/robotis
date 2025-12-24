@@ -85,7 +85,7 @@ defmodule Robotis do
   def init(opts) do
     port = Keyword.fetch!(opts, :uart_port)
     baud = Keyword.get(opts, :baud, 57_600)
-    control_table = Keyword.get(opts, :control_table, :xl330_m288)
+    control_table = Keyword.fetch!(opts, :control_table)
     {:ok, connect} = Comm.open(port, baud)
 
     {:ok, %{connect: connect, control_table: control_table}}

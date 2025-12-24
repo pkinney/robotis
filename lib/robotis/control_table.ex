@@ -8,29 +8,23 @@ defmodule Robotis.ControlTable do
 
   @type address() :: byte()
   @type length() :: non_neg_integer()
-  @type conversion() :: :bool | number() | {module(), atom(), atom()} | list({any(), binary()})
-  @type param_info() :: {address(), length(), conversion()}
+  @type conversion() :: :bool | number() | {module(), atom(), atom() | nil} | list({any(), binary()}) | nil
+  @type param_info() :: {address(), length(), conversion()} | {address(), length()}
 
-  @type table_type() :: :xl330_m288 | :xm430 | :xl320
+  @callback table() :: %{param() => param_info()}
 
-  @spec info_for_param(table_type(), param()) :: param_info() | nil
-  def info_for_param(table_type, param), do: __MODULE__.Tables.table(table_type) |> Map.get(param)
+  @spec info_for_param(module(), param()) :: param_info() | nil
+  def info_for_param(control_table, param), do: control_table.table() |> Map.get(param)
 
-  @spec info_for_param(param()) :: param_info() | nil
-  def info_for_param(param), do: info_for_param(:xl330_m288, param)
-
-  @spec address_and_length_for_param(table_type(), param()) :: {address(), length()}
-  def address_and_length_for_param(table_type, param) do
-    {address, len, _} = info_for_param(table_type, param)
+  @spec address_and_length_for_param(module(), param()) :: {address(), length()}
+  def address_and_length_for_param(control_table, param) do
+    {address, len, _} = info_for_param(control_table, param)
     {address, len}
   end
 
-  @spec address_and_length_for_param(param()) :: {address(), length()}
-  def address_and_length_for_param(param), do: address_and_length_for_param(:xl330_m288, param)
-
-  @spec decode_param(table_type(), param(), binary()) :: {:ok, any()} | {:error, any()}
-  def decode_param(table_type, param, value) do
-    case info_for_param(table_type, param) do
+  @spec decode_param(module(), param(), binary()) :: {:ok, any()} | {:error, any()}
+  def decode_param(control_table, param, value) do
+    case info_for_param(control_table, param) do
       {_, _, scale} when is_number(scale) -> {:ok, Utils.decode_int(value) * scale}
       {_, _, mapping} when is_list(mapping) -> decode_map(value, mapping)
       {_, _, :bool} -> {:ok, Utils.decode_boolean(value)}
@@ -39,12 +33,9 @@ defmodule Robotis.ControlTable do
     end
   end
 
-  @spec decode_param(param(), binary()) :: {:ok, any()} | {:error, any()}
-  def decode_param(param, value), do: decode_param(:xl330_m288, param, value)
-
-  @spec encode_param(table_type(), param(), any()) :: {:ok, address(), binary()} | {:error, any()}
-  def encode_param(table_type, param, value) do
-    case info_for_param(table_type, param) do
+  @spec encode_param(module(), param(), any()) :: {:ok, address(), binary()} | {:error, any()}
+  def encode_param(control_table, param, value) do
+    case info_for_param(control_table, param) do
       nil ->
         {:error, {:unknown_param, param}}
 
@@ -59,22 +50,6 @@ defmodule Robotis.ControlTable do
           nil -> {:error, :unconvertible_value}
           bytes -> {:ok, address, bytes}
         end
-    end
-  end
-
-  @spec encode_param(param(), any()) :: {:ok, address(), binary()} | {:error, any()}
-  def encode_param(param, value) do
-    {address, length, conversion} = info_for_param(param)
-
-    case conversion do
-      scale when is_number(scale) -> (value / scale) |> trunc() |> Utils.encode_int(length)
-      mapping when is_list(mapping) -> encode_map(value, mapping)
-      :bool -> Utils.encode_boolean(value)
-      {mod, _, fun} -> apply(mod, fun, [value])
-    end
-    |> case do
-      nil -> {:error, :unconvertible_value}
-      bytes -> {:ok, address, bytes}
     end
   end
 
