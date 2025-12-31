@@ -10,14 +10,30 @@ defmodule Robotis do
   @options ~w(uart_port baud control_table)a
 
   @type connect() :: %{uart: pid()}
-  @type param() :: __MODULE__.ControlTable.param()
+  @type param() :: atom()
   @type servo_id() :: byte()
   @type server() :: atom() | pid()
 
-  @spec ping(server()) :: Ping.result()
+  @typedoc """
+  Result of a ping operation.
+
+  On success, returns a map with the servo's ID, model number, model name, and firmware version.
+  On failure, returns an error tuple.
+  """
+  @type ping_result() ::
+          {:ok,
+           %{
+             id: byte(),
+             model_number: non_neg_integer(),
+             model: atom(),
+             firmware: byte()
+           }}
+          | {:error, any()}
+
+  @spec ping(server()) :: [ping_result()]
   def ping(pid), do: GenServer.call(pid, :ping)
 
-  @spec ping(server(), servo_id()) :: Ping.result()
+  @spec ping(server(), servo_id()) :: ping_result()
   def ping(pid, servo), do: GenServer.call(pid, {:ping, servo})
 
   @spec read(server(), servo_id(), param()) :: {:ok, any()} | {:error, any()}
