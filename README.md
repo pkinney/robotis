@@ -6,7 +6,7 @@
 
 Driver for interfacing with Robotis Dynamixel servos.
 
-This is a work in progress and currently only supports XL330 and devices with the same Control Table. It also only speaks Dynamixel protocol v2.
+This is a work in progress and currently supports XL320, XL330, and XM430 series servos. It only speaks Dynamixel protocol v2.
 
 While it is possible to support GPIO-based switching for converting UART to the half-duplex signal required by Dynamixel, this library works best
 speaking UART over USB to another device that can do that conversion (such as and [OpenR150](https://www.robotis.us/openrb-150-starter-kit/) running
@@ -17,7 +17,7 @@ the `usb_to_dynamixel` sketch.
 ```elixir
 def deps do
   [
-    {:robotis, "~> 0.1.1"}
+    {:robotis, "~> 0.2.0"}
   ]
 end
 ```
@@ -41,7 +41,7 @@ Currently, the library contains the following control tables:
 
 - `Robotis.ControlTable.XL320`
 - `Robotis.ControlTable.XL330`
-- `Robotis.ControlTable.XL430`
+- `Robotis.ControlTable.XM430`
 
 You can also define your own control tables by creating a module that implements the `Robotis.ControlTable` behaviour and defines the necessary registers.
 
